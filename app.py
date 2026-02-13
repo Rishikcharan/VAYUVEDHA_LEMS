@@ -28,15 +28,21 @@ db = firestore.client()
 # =========================================================
 @st.cache_data(ttl=5)
 def fetch_data_for_date(date_str):
-    readings = db.collection("sensor_data") \
-                 .document(date_str) \
-                 .collection("readings") \
-                 .stream()
 
-    data = [doc.to_dict() for doc in readings]
+    st.write("Fetching date:", date_str)
 
-    if not data:
+    readings_ref = db.collection("sensor_data") \
+                     .document(date_str) \
+                     .collection("readings")
+
+    docs = list(readings_ref.stream())
+
+    st.write("Number of documents found:", len(docs))
+
+    if not docs:
         return pd.DataFrame()
+
+    data = [doc.to_dict() for doc in docs]
 
     df = pd.DataFrame(data)
     df["timestamp"] = pd.to_datetime(df["timestamp"])
@@ -44,6 +50,7 @@ def fetch_data_for_date(date_str):
     df = df.set_index("timestamp")
 
     return df
+
 
 # =========================================================
 # ---------------- TABS -----------------------------------
