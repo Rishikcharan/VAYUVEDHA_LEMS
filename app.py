@@ -13,6 +13,7 @@ import pytz
 st.set_page_config(layout="wide")
 st.title("🌍 LEMS Smart Monitoring Dashboard")
 # Auto refresh every 5 seconds
+st.autorefresh(interval=5000, key="auto_refresh")
 
 # =========================================================
 # ---------------- FIREBASE INIT --------------------------
@@ -46,12 +47,11 @@ def fetch_data_for_date(date_str):
     df["timestamp"] = pd.to_datetime(df["timestamp"])
     df = df.sort_values("timestamp")
 
-    # Convert to 24hr format for display
     df["time_only"] = df["timestamp"].dt.strftime("%H:%M:%S")
-
     df = df.set_index("time_only")
 
     return df
+
 
 
 
@@ -65,7 +65,7 @@ tab1, tab2 = st.tabs(["📅 Today", "📁 Past Days"])
 # =========================================================
 with tab1:
 
-    st.subheader("Live Data (Updates Every 5 Seconds)")
+    st.subheader("Live Data (Auto Updates Every 5 Seconds)")
 
     ist = pytz.timezone("Asia/Kolkata")
     today_str = datetime.now(ist).strftime("%Y-%m-%d")
@@ -75,8 +75,6 @@ with tab1:
     if df_today.empty:
         st.warning("No data found for this date.")
     else:
-        st.success(f"Found {len(df_today)} records")
-
         col1, col2 = st.columns(2)
 
         with col1:
@@ -87,8 +85,6 @@ with tab1:
             st.markdown("### 🌫 AQI")
             st.line_chart(df_today["aqi"])
 
-    time.sleep(5)
-    st.rerun()
 
 
 # =========================================================
