@@ -5,6 +5,7 @@ import pandas as pd
 from datetime import datetime
 import json
 import time
+import pytz
 
 # =========================================================
 # ---------------- PAGE CONFIG -----------------------------
@@ -64,7 +65,8 @@ with tab1:
 
     st.subheader("Live Data")
 
-    today_str = datetime.now().strftime("%Y-%m-%d")
+    ist = pytz.timezone("Asia/Kolkata")
+    today_str = datetime.now(ist).strftime("%Y-%m-%d")
     st.write("Checking date:", today_str)  # Debug
 
     df_today = fetch_data_for_date(today_str)
