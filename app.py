@@ -4,15 +4,13 @@ from firebase_admin import credentials, firestore
 import pandas as pd
 from datetime import datetime
 import json
+import time
 
 # =========================================================
 # ---------------- PAGE CONFIG -----------------------------
 # =========================================================
 st.set_page_config(layout="wide")
 st.title("🌍 LEMS Smart Monitoring Dashboard")
-
-# Auto refresh entire app every 5 seconds
-st.autorefresh(interval=5000, key="auto_refresh")
 
 # =========================================================
 # ---------------- FIREBASE INIT --------------------------
@@ -28,7 +26,7 @@ db = firestore.client()
 # =========================================================
 # ---------------- DATA FETCH FUNCTION --------------------
 # =========================================================
-@st.cache_data(ttl=5)   # cache for 5 seconds (prevents excessive reads)
+@st.cache_data(ttl=5)
 def fetch_data_for_date(date_str):
     readings = db.collection("sensor_data") \
                  .document(date_str) \
@@ -56,28 +54,38 @@ tab1, tab2 = st.tabs(["📅 Today", "📁 Past Days"])
 # ===================== TODAY TAB =========================
 # =========================================================
 with tab1:
+
     st.subheader("Live Data (Updates every 5 seconds)")
 
-    today_str = datetime.now().strftime("%Y-%m-%d")
-    df_today = fetch_data_for_date(today_str)
+    placeholder = st.empty()
 
-    if df_today.empty:
-        st.info("No data available for today yet.")
-    else:
-        col1, col2 = st.columns(2)
+    while True:
+        with placeholder.container():
 
-        with col1:
-            st.subheader("🌡 Temperature")
-            st.line_chart(df_today["temperature"])
+            today_str = datetime.now().strftime("%Y-%m-%d")
+            df_today = fetch_data_for_date(today_str)
 
-        with col2:
-            st.subheader("🌫 AQI")
-            st.line_chart(df_today["aqi"])
+            if df_today.empty:
+                st.info("No data available for today yet.")
+            else:
+                col1, col2 = st.columns(2)
+
+                with col1:
+                    st.subheader("🌡 Temperature")
+                    st.line_chart(df_today["temperature"])
+
+                with col2:
+                    st.subheader("🌫 AQI")
+                    st.line_chart(df_today["aqi"])
+
+        time.sleep(5)
+        st.rerun()
 
 # =========================================================
 # ===================== PAST DAYS TAB =====================
 # =========================================================
 with tab2:
+
     st.subheader("View Previous Days Data")
 
     @st.cache_data
