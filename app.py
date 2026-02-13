@@ -13,8 +13,7 @@ import pytz
 st.set_page_config(layout="wide")
 st.title("🌍 LEMS Smart Monitoring Dashboard")
 # Auto refresh every 5 seconds
-st.autorefresh(interval=5000, key="auto_refresh")
-
+refresh_placeholder = st.empty()
 # =========================================================
 # ---------------- FIREBASE INIT --------------------------
 # =========================================================
@@ -86,7 +85,6 @@ with tab1:
             st.line_chart(df_today["aqi"])
 
 
-
 # =========================================================
 # ===================== PAST DAYS TAB =====================
 # =========================================================
@@ -120,3 +118,6 @@ with tab2:
             with col2:
                 st.subheader("🌫 AQI")
                 st.line_chart(df_past["aqi"])
+# Auto refresh every 5 seconds
+time.sleep(5)
+st.experimental_rerun()
