@@ -4,6 +4,7 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 from datetime import datetime
 import pytz
+import time
 
 # -------------------------
 # PAGE CONFIG
@@ -11,8 +12,15 @@ import pytz
 st.set_page_config(layout="wide")
 st.title("🌍 LEMS Smart Monitoring Dashboard")
 
-# Auto refresh every 5 seconds
-st.autorefresh(interval=5000, key="auto_refresh")
+# -------------------------
+# SIMPLE SAFE AUTO REFRESH
+# -------------------------
+if "refresh_counter" not in st.session_state:
+    st.session_state.refresh_counter = 0
+
+time.sleep(5)
+st.session_state.refresh_counter += 1
+st.rerun()
 
 # -------------------------
 # FIREBASE INITIALIZATION
@@ -43,14 +51,10 @@ def fetch_data_for_date(date_str):
 
     df = pd.DataFrame(data)
 
-    # Convert timestamp
     df["timestamp"] = pd.to_datetime(df["timestamp"])
     df = df.sort_values("timestamp")
 
-    # Create readable time column
     df["time_only"] = df["timestamp"].dt.strftime("%H:%M:%S")
-
-    # Set as index for graph x-axis
     df = df.set_index("time_only")
 
     return df
@@ -61,11 +65,9 @@ def fetch_data_for_date(date_str):
 tab1, tab2 = st.tabs(["📡 Today", "📅 Select Date"])
 
 # =========================
-# TAB 1 — TODAY LIVE
+# TODAY TAB
 # =========================
 with tab1:
-
-    st.subheader("Live Data (Updates Every 5 Seconds)")
 
     ist = pytz.timezone("Asia/Kolkata")
     today_str = datetime.now(ist).strftime("%Y-%m-%d")
@@ -87,11 +89,9 @@ with tab1:
             st.line_chart(df_today["aqi"])
 
 # =========================
-# TAB 2 — SELECT DATE
+# PAST DATE TAB
 # =========================
 with tab2:
-
-    st.subheader("View Historical Data")
 
     selected_date = st.date_input("Choose Date")
 
@@ -102,7 +102,7 @@ with tab2:
         df_selected = fetch_data_for_date(selected_str)
 
         if df_selected.empty:
-            st.warning("No data found for this date.")
+            st.warning("No data found.")
         else:
 
             col1, col2 = st.columns(2)
