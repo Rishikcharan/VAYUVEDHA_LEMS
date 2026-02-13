@@ -12,6 +12,15 @@ import pytz
 # =========================================================
 st.set_page_config(layout="wide")
 st.title("🌍 LEMS Smart Monitoring Dashboard")
+# Auto refresh every 5 seconds
+if "last_refresh" not in st.session_state:
+    st.session_state.last_refresh = time.time()
+
+current_time = time.time()
+
+if current_time - st.session_state.last_refresh > 5:
+    st.session_state.last_refresh = current_time
+    st.rerun()
 
 # =========================================================
 # ---------------- FIREBASE INIT --------------------------
