@@ -36,28 +36,23 @@ db = firestore.client()
 # =========================================================
 # ---------------- DATA FETCH FUNCTION --------------------
 # =========================================================
-@st.cache_data(ttl=5)
 def fetch_data_for_date(date_str):
 
-    st.write("Fetching date:", date_str)
+    readings = db.collection("sensor_data") \
+                 .document(date_str) \
+                 .collection("readings") \
+                 .order_by("timestamp") \
+                 .stream()
 
-    readings_ref = db.collection("sensor_data") \
-                     .document(date_str) \
-                     .collection("readings")
+    data = [doc.to_dict() for doc in readings]
 
-    docs = list(readings_ref.stream())
-
-    st.write("Number of documents found:", len(docs))
-
-    if not docs:
+    if not data:
         return pd.DataFrame()
 
-    data = [doc.to_dict() for doc in docs]
-
     df = pd.DataFrame(data)
+
     df["timestamp"] = pd.to_datetime(df["timestamp"])
     df = df.sort_values("timestamp")
-    df = df.set_index("timestamp")
 
     return df
 
