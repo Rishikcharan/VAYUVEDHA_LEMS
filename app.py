@@ -55,30 +55,27 @@ tab1, tab2 = st.tabs(["📅 Today", "📁 Past Days"])
 # =========================================================
 with tab1:
 
-    st.subheader("Live Data (Updates every 5 seconds)")
+    st.subheader("Live Data")
 
-    placeholder = st.empty()
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    st.write("Checking date:", today_str)  # Debug
 
-    while True:
-        with placeholder.container():
+    df_today = fetch_data_for_date(today_str)
 
-            today_str = datetime.utcnow().strftime("%Y-%m-%d")
-            df_today = fetch_data_for_date(today_str)
+    if df_today.empty:
+        st.warning("No data found for this date.")
+    else:
+        st.success(f"Found {len(df_today)} records")
 
-            if df_today.empty:
-                st.info("No data available for today yet.")
-            else:
-                col1, col2 = st.columns(2)
+        col1, col2 = st.columns(2)
 
-                with col1:
-                    st.subheader("🌡 Temperature")
-                    st.line_chart(df_today["temperature"])
+        with col1:
+            st.line_chart(df_today["temperature"])
 
-                with col2:
-                    st.subheader("🌫 AQI")
-                    st.line_chart(df_today["aqi"])
+        with col2:
+            st.line_chart(df_today["aqi"])
 
-        time.sleep(5)
+    if st.button("Refresh"):
         st.rerun()
 
 # =========================================================
