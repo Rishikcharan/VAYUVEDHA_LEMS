@@ -13,14 +13,6 @@ import pytz
 st.set_page_config(layout="wide")
 st.title("🌍 LEMS Smart Monitoring Dashboard")
 # Auto refresh every 5 seconds
-if "last_refresh" not in st.session_state:
-    st.session_state.last_refresh = time.time()
-
-current_time = time.time()
-
-if current_time - st.session_state.last_refresh > 5:
-    st.session_state.last_refresh = current_time
-    st.rerun()
 
 # =========================================================
 # ---------------- FIREBASE INIT --------------------------
@@ -54,7 +46,13 @@ def fetch_data_for_date(date_str):
     df["timestamp"] = pd.to_datetime(df["timestamp"])
     df = df.sort_values("timestamp")
 
+    # Convert to 24hr format for display
+    df["time_only"] = df["timestamp"].dt.strftime("%H:%M:%S")
+
+    df = df.set_index("time_only")
+
     return df
+
 
 
 # =========================================================
@@ -67,37 +65,30 @@ tab1, tab2 = st.tabs(["📅 Today", "📁 Past Days"])
 # =========================================================
 with tab1:
 
-    st.subheader("Live Data")
-
-    placeholder = st.empty()
+    st.subheader("Live Data (Updates Every 5 Seconds)")
 
     ist = pytz.timezone("Asia/Kolkata")
+    today_str = datetime.now(ist).strftime("%Y-%m-%d")
 
-    while True:
+    df_today = fetch_data_for_date(today_str)
 
-        today_str = datetime.now(ist).strftime("%Y-%m-%d")
+    if df_today.empty:
+        st.warning("No data found for this date.")
+    else:
+        st.success(f"Found {len(df_today)} records")
 
-        with placeholder.container():
+        col1, col2 = st.columns(2)
 
-            st.write("Checking date:", today_str)
+        with col1:
+            st.markdown("### 🌡 Temperature")
+            st.line_chart(df_today["temperature"])
 
-            df_today = fetch_data_for_date(today_str)
+        with col2:
+            st.markdown("### 🌫 AQI")
+            st.line_chart(df_today["aqi"])
 
-            if df_today.empty:
-                st.warning("No data found for this date.")
-            else:
-                st.success(f"Found {len(df_today)} records")
-
-                col1, col2 = st.columns(2)
-
-                with col1:
-                    st.line_chart(df_today["temperature"])
-
-                with col2:
-                    st.line_chart(df_today["aqi"])
-
-        time.sleep(5)
-        st.rerun()
+    time.sleep(5)
+    st.rerun()
 
 
 # =========================================================
