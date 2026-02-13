@@ -62,7 +62,7 @@ with tab1:
     while True:
         with placeholder.container():
 
-            today_str = datetime.now().strftime("%Y-%m-%d")
+            today_str = datetime.utcnow().strftime("%Y-%m-%d")
             df_today = fetch_data_for_date(today_str)
 
             if df_today.empty:
