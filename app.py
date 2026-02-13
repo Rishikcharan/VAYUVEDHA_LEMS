@@ -4,10 +4,13 @@ from firebase_admin import credentials, firestore
 import pandas as pd
 from datetime import datetime
 import time
+import json
 
 # ---------------- FIRESTORE INIT ----------------
 if not firebase_admin._apps:
-    cred = credentials.Certificate("serviceAccountKey.json")
+    cred = credentials.Certificate(
+    json.loads(st.secrets["firebase_key"])
+)
     firebase_admin.initialize_app(cred)
 
 db = firestore.client()
