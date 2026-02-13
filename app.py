@@ -74,27 +74,36 @@ with tab1:
 
     st.subheader("Live Data")
 
+    placeholder = st.empty()
+
     ist = pytz.timezone("Asia/Kolkata")
-    today_str = datetime.now(ist).strftime("%Y-%m-%d")
-    st.write("Checking date:", today_str)  # Debug
 
-    df_today = fetch_data_for_date(today_str)
+    while True:
 
-    if df_today.empty:
-        st.warning("No data found for this date.")
-    else:
-        st.success(f"Found {len(df_today)} records")
+        today_str = datetime.now(ist).strftime("%Y-%m-%d")
 
-        col1, col2 = st.columns(2)
+        with placeholder.container():
 
-        with col1:
-            st.line_chart(df_today["temperature"])
+            st.write("Checking date:", today_str)
 
-        with col2:
-            st.line_chart(df_today["aqi"])
+            df_today = fetch_data_for_date(today_str)
 
-    if st.button("Refresh"):
+            if df_today.empty:
+                st.warning("No data found for this date.")
+            else:
+                st.success(f"Found {len(df_today)} records")
+
+                col1, col2 = st.columns(2)
+
+                with col1:
+                    st.line_chart(df_today["temperature"])
+
+                with col2:
+                    st.line_chart(df_today["aqi"])
+
+        time.sleep(5)
         st.rerun()
+
 
 # =========================================================
 # ===================== PAST DAYS TAB =====================
