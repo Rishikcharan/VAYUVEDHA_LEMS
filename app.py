@@ -4,39 +4,24 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 from datetime import datetime
 import pytz
-import json
+
 # =========================================================
-# ---------------- PAGE CONFIG -----------------------------
+# PAGE CONFIG
 # =========================================================
 st.set_page_config(layout="wide")
 st.title("🌍 LEMS Smart Monitoring Dashboard")
 
 # =========================================================
-# --------- AUTO REFRESH EVERY 5 SECONDS (SAFE) ----------
+# FIREBASE INITIALIZATION (LOCAL VERSION)
 # =========================================================
-st.markdown(
-    """
-    <meta http-equiv="refresh" content="5">
-    """,
-    unsafe_allow_html=True
-)
-
-# =========================================================
-# ---------------- FIREBASE INIT --------------------------
-# =========================================================
-
-
 if not firebase_admin._apps:
-    cred = credentials.Certificate(
-        json.loads(st.secrets["firebase_key"])
-    )
+    cred = credentials.Certificate("firebase_key.json")
     firebase_admin.initialize_app(cred)
 
 db = firestore.client()
 
-
 # =========================================================
-# ---------------- DATA FETCH FUNCTION --------------------
+# DATA FETCH FUNCTION
 # =========================================================
 def fetch_data_for_date(date_str):
 
@@ -58,25 +43,23 @@ def fetch_data_for_date(date_str):
     df["timestamp"] = pd.to_datetime(df["timestamp"])
     df = df.sort_values("timestamp")
 
-    # 24-hour format time for x-axis
-    df["Time (24hr)"] = df["timestamp"].dt.strftime("%H:%M:%S")
-
-    df = df.set_index("Time (24hr)")
+    df["time_only"] = df["timestamp"].dt.strftime("%H:%M:%S")
+    df = df.set_index("time_only")
 
     return df
 
 
 # =========================================================
-# ---------------- TABS -----------------------------------
+# TABS
 # =========================================================
 tab1, tab2 = st.tabs(["📡 Today", "📅 Select Date"])
 
 # =========================================================
-# ===================== TODAY TAB =========================
+# TODAY TAB
 # =========================================================
 with tab1:
 
-    st.subheader("Live Data (Updates Every 5 Seconds)")
+    st.subheader("Today's Data")
 
     ist = pytz.timezone("Asia/Kolkata")
     today_str = datetime.now(ist).strftime("%Y-%m-%d")
@@ -99,11 +82,9 @@ with tab1:
 
 
 # =========================================================
-# ===================== PAST DAYS TAB =====================
+# SELECT DATE TAB
 # =========================================================
 with tab2:
-
-    st.subheader("View Historical Data")
 
     selected_date = st.date_input("Choose Date")
 
