@@ -46,9 +46,10 @@ def fetch_data_for_date(date_str):
 
     df = pd.DataFrame(data)
 
-    # Convert Firestore timestamp field
+    # Convert Firestore timestamp field to IST
     if "time" in df.columns:
-        df["time"] = pd.to_datetime(df["time"])
+        ist = pytz.timezone("Asia/Kolkata")
+        df["time"] = pd.to_datetime(df["time"]).dt.tz_convert(ist)
         df = df.sort_values("time")
         df["time_only"] = df["time"].dt.strftime("%H:%M:%S")
         df = df.set_index("time_only")
