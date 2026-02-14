@@ -1,22 +1,19 @@
 import streamlit as st
-import pandas as pd
 import firebase_admin
 from firebase_admin import credentials, firestore
+import pandas as pd
 from datetime import datetime
 import json
 import pytz
 
 # =========================================================
-# PAGE CONFIG
+# ---------------- PAGE CONFIG -----------------------------
 # =========================================================
 st.set_page_config(layout="wide")
 st.title("🌍 LEMS Smart Monitoring Dashboard")
 
-# Inject meta refresh (reload every 5 seconds)
-st.markdown("<meta http-equiv='refresh' content='5'>", unsafe_allow_html=True)
-
 # =========================================================
-# FIREBASE INITIALIZATION
+# ---------------- FIREBASE INIT ---------------------------
 # =========================================================
 if not firebase_admin._apps:
     cred = credentials.Certificate(
@@ -26,93 +23,102 @@ if not firebase_admin._apps:
 
 db = firestore.client()
 
-
 # =========================================================
-# DATA FETCH FUNCTION
+# ---------------- DATA FETCH FUNCTION ---------------------
 # =========================================================
+@st.cache_data(ttl=5)
 def fetch_data_for_date(date_str):
-    readings = (
-        db.collection("history")
+
+    st.write("Fetching date:", date_str)
+
+    readings_ref = (
+        db.collection("sensor_data")
         .document(date_str)
         .collection("readings")
-        .order_by("time")
-        .stream()
     )
 
-    data = [doc.to_dict() for doc in readings]
+    docs = list(readings_ref.stream())
+    st.write("Number of documents found:", len(docs))
 
-    if not data:
+    if not docs:
         return pd.DataFrame()
 
+    data = [doc.to_dict() for doc in docs]
     df = pd.DataFrame(data)
 
-    # Convert Firestore timestamp field to IST
-    if "time" in df.columns:
-        ist = pytz.timezone("Asia/Kolkata")
-        df["time"] = pd.to_datetime(df["time"]).dt.tz_convert(ist)
-        df = df.sort_values("time")
-        df["time_only"] = df["time"].dt.strftime("%H:%M:%S")
-        df = df.set_index("time_only")
+    df["timestamp"] = pd.to_datetime(df["timestamp"])
+    df = df.sort_values("timestamp")
+    df = df.set_index("timestamp")
 
     return df
 
 # =========================================================
-# TABS
+# ---------------- TABS -----------------------------------
 # =========================================================
-tab1, tab2 = st.tabs(["📡 Today", "📅 Select Date"])
+tab1, tab2 = st.tabs(["📅 Today", "📁 Past Days"])
 
 # =========================================================
-# TODAY TAB
+# ===================== TODAY TAB =========================
 # =========================================================
 with tab1:
-    st.subheader("Today's Data")
+
+    st.subheader("Live Data")
 
     ist = pytz.timezone("Asia/Kolkata")
     today_str = datetime.now(ist).strftime("%Y-%m-%d")
 
+    st.write("Checking date:", today_str)  # Debug
+
     df_today = fetch_data_for_date(today_str)
 
     if df_today.empty:
-        st.warning("No data found for today.")
+        st.warning("No data found for this date.")
     else:
+        st.success(f"Found {len(df_today)} records")
+
         col1, col2 = st.columns(2)
 
         with col1:
-            st.markdown("### 🌡 Temperature (°C)")
-            st.line_chart(df_today["temp"], use_container_width=True)
+            st.subheader("🌡 Temperature")
+            st.line_chart(df_today["temperature"])
 
         with col2:
-            st.markdown("### 🌫 AQI")
-            st.line_chart(df_today["aqi"], use_container_width=True)
+            st.subheader("🌫 AQI")
+            st.line_chart(df_today["aqi"])
+
+    if st.button("Refresh"):
+        st.rerun()
 
 # =========================================================
-# SELECT DATE TAB
+# ===================== PAST DAYS TAB =====================
 # =========================================================
 with tab2:
-    selected_date = st.date_input("Choose Date")
 
-    if selected_date:
-        selected_str = selected_date.strftime("%Y-%m-%d")
-        df_selected = fetch_data_for_date(selected_str)
+    st.subheader("View Previous Days Data")
 
-        if df_selected.empty:
-            st.warning("No data found.")
+    @st.cache_data
+    def get_available_dates():
+        docs = db.collection("sensor_data").stream()
+        return sorted([doc.id for doc in docs], reverse=True)
+
+    dates = get_available_dates()
+
+    if not dates:
+        st.warning("No stored data available.")
+    else:
+        selected_date = st.selectbox("Select Date", dates)
+
+        df_past = fetch_data_for_date(selected_date)
+
+        if df_past.empty:
+            st.info("No data for selected date.")
         else:
             col1, col2 = st.columns(2)
 
             with col1:
-                st.markdown(f"### 🌡 Temperature (°C) — {selected_str}")
-                st.line_chart(df_selected["temp"], use_container_width=True)
+                st.subheader("🌡 Temperature")
+                st.line_chart(df_past["temperature"])
 
             with col2:
-                st.markdown(f"### 🌫 AQI — {selected_str}")
-                st.line_chart(df_selected["aqi"], use_container_width=True)
-
-            # CSV download option
-            csv = df_selected.to_csv(index=False).encode("utf-8")
-            st.download_button(
-                label="📥 Download this day's data as CSV",
-                data=csv,
-                file_name=f"{selected_str}_sensor_data.csv",
-                mime="text/csv",
-            )
+                st.subheader("🌫 AQI")
+                st.line_chart(df_past["aqi"])
