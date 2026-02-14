@@ -26,29 +26,29 @@ db = firestore.client()
 # =========================================================
 # ---------------- DATA FETCH FUNCTION ---------------------
 # =========================================================
+@st.cache_data(ttl=5)
 def fetch_data_for_date(date_str):
-    readings = (
-        db.collection("history")
+
+    st.write("Fetching date:", date_str)
+
+    readings_ref = (
+        db.collection("sensor_data")
         .document(date_str)
         .collection("readings")
-        .order_by("time")
-        .stream()
     )
 
-    data = [doc.to_dict() for doc in readings]
+    docs = list(readings_ref.stream())
+    st.write("Number of documents found:", len(docs))
 
-    if not data:
+    if not docs:
         return pd.DataFrame()
 
+    data = [doc.to_dict() for doc in docs]
     df = pd.DataFrame(data)
 
-    # Convert Firestore timestamp field to IST
-    if "time" in df.columns:
-        ist = pytz.timezone("Asia/Kolkata")
-        df["time"] = pd.to_datetime(df["time"]).dt.tz_localize("UTC").dt.tz_convert(ist)
-        df = df.sort_values("time")
-        df["time_only"] = df["time"].dt.strftime("%H:%M:%S")
-        df = df.set_index("time_only")
+    df["timestamp"] = pd.to_datetime(df["timestamp"])
+    df = df.sort_values("timestamp")
+    df = df.set_index("timestamp")
 
     return df
 
